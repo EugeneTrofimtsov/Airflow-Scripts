@@ -1,0 +1,90 @@
+import os
+import sys
+from airflow import DAG
+from airflow.operators.bash_operator import BashOperator
+from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
+from airflow.utils.dates import days_ago
+from airflow.hooks.base_hook import BaseHook
+
+os.environ['JAVA_HOME']='path'
+os.environ['HADOOP_HOME']='path'
+os.environ['HADOOP_CONF_DIR']='path'
+os.environ['YARN_HOME']='path'
+os.environ['SPARK_HOME']='path'
+
+sys.path.append(os.path.join(os.environ['JAVA_HOME'], 'bin'))
+sys.path.append(os.path.join(os.environ['HADOOP_HOME'], 'bin'))
+sys.path.append(os.path.join(os.environ['YARN_HOME'], 'bin'))
+sys.path.append(os.path.join(os.environ['SPARK_HOME'], 'bin'))
+
+default_args = {
+	'owner': 'airflow',
+	'depends_on_past': False,
+	'start_date': days_ago(1),
+	'email': [airflow@airflow.com],
+	'email_on_failure': True,
+	'email_on_retry': True,
+	'retries': 0
+}
+
+home_dir = 'path/'
+connection = BaseHook.get_connection('conn_name')
+
+with DAG('name', default_args=default_args, schedule_interval=[cron|preset], catchup=False, max_active_runs=1) as dag:
+
+	bash_spark_task = BashOperator(
+		task_id = 'name',
+		bash_command = f'spark-submit \
+		--class path.to.Main \
+		--master yarn \
+		--deploy-mode [client|cluster] \
+		--keytab {home_dir}keytab \
+		--principal name@DOMEN \
+		--queue name \
+		--jars {home_dir}jar \
+		--driver-cores X \
+		--driver-memory XG \
+		--num-executors X \
+		--executor-cors X \
+		--executor-memory XG \
+		--conf spark.app.name=Project_name \
+		--conf spark.hadoop.hive.exec.dynamic.partition=true \
+		--conf spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict \
+		--conf spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation=true \
+		{home_dir}project_jar \
+		PARAM1=={connection.host}:{connection.port}:{connection.schema} \
+		PARAM2==value2 \
+		PARAM3==value3',
+		dag = dag
+	)
+
+	spark_conf = {
+		'spark.master':'yarn',
+		'spark.submit.deployMode':'cluster',
+		'spark.driver.memory':'Xg',
+		'spark.executor.memory':'Xg',
+		'spark.executor.cores':'X',
+		'spark.num.executors':'X',
+		'spark.hadoop.hive.exec.dynamic.partition':'true',
+		'spark.hadoop.hive.exec.dynamic.partition.mode':'nonstrict',
+		'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation':'true'
+	}
+
+	spark_submit_task = SparkSubmitOperator(
+		task_id = 'name',
+		name = 'job_name',
+		application = os.path.join(home_dir, 'project_jar')
+		java_class = 'path.to.Main'
+		spark_home = 'path'
+		spark_binary = 'path'
+		principal = 'name@DOMEN'
+		keytab = os.path.join(home_dir, 'keytab')
+		jars = os.path.join(home_dir, 'jar')
+		application_args = [
+			f'PARAM1=={connection.host}:{connection.port}:{connection.schema}'
+			'PARAM2==value2'
+			'PARAM3==value3'
+		],
+		conf = spark_conf,
+		dag = dag
+	)
