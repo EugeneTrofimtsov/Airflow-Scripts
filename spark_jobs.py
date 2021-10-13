@@ -30,7 +30,7 @@ default_args = {
 	'start_date': days_ago(1),
 	'max_active_runs': 1,
 	'catchup': False,
-	'email': [user@mail.com],
+	'email': ['user@mail.com'],
 	'email_on_failure': True,
 	'email_on_retry': False,
 	'retries': 0
@@ -41,7 +41,7 @@ connection = BaseHook.get_connection('connection_name')
 dag_id = 'dag_name'
 task_id = 'task_name'
 
-with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|preset]) as dag:
+with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron | preset]) as dag:
 
 	bash_command = f'spark-submit \
 	--class path.to.Main \
@@ -67,47 +67,47 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|prese
 
 	# First option - local spark-submit command with bash
 	bash_spark_task = BashOperator(
-		task_id = task_id,
-		bash_command = bash_command,
-		dag = dag
+		task_id=task_id,
+		bash_command=bash_command,
+		dag=dag
 	)
 
 	# Second option - airflow ssh operator remote spark submit command with bash
 	ssh_spark_task = SSHOperator(
-		task_id = task_id,
+		task_id=task_id,
 		ssh_conn_id='ssh_connection_name',
-		bash_command = bash_command,
-		dag = dag
+		bash_command=bash_command,
+		dag=dag
 	)
 	
 	spark_conf = {
-		'spark.master':'yarn',
-		'spark.submit.deployMode':'cluster',
-		'spark.driver.memory':'Xg',
-		'spark.executor.memory':'Xg',
-		'spark.executor.cores':'X',
-		'spark.num.executors':'X',
-		'spark.hadoop.hive.exec.dynamic.partition':'true',
-		'spark.hadoop.hive.exec.dynamic.partition.mode':'nonstrict',
-		'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation':'true'
+		'spark.master': 'yarn',
+		'spark.submit.deployMode': 'cluster',
+		'spark.driver.memory': 'Xg',
+		'spark.executor.memory': 'Xg',
+		'spark.executor.cores': 'X',
+		'spark.num.executors': 'X',
+		'spark.hadoop.hive.exec.dynamic.partition': 'true',
+		'spark.hadoop.hive.exec.dynamic.partition.mode': 'nonstrict',
+		'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation': 'true'
 	}
 
 	# Third option - airflow spark submit operator
 	spark_submit_task = SparkSubmitOperator(
-		task_id = task_id,
-		name = f'{dag_id}.{task_id}',
-		application = os.path.join(home_dir, 'project_jar')
-		java_class = 'path.to.Main'
-		spark_home = 'path'
-		spark_binary = 'path'
-		principal = 'name@DOMEN'
-		keytab = os.path.join(home_dir, 'keytab')
-		jars = os.path.join(home_dir, 'jar')
-		application_args = [
+		task_id=task_id,
+		name=f'{dag_id}.{task_id}',
+		application=os.path.join(home_dir, 'project_jar'),
+		java_class='path.to.Main',
+		spark_home='path',
+		spark_binary='path',
+		principal='name@DOMEN',
+		keytab=os.path.join(home_dir, 'keytab'),
+		jars=os.path.join(home_dir, 'jar'),
+		application_args=[
 			f'PARAM1=={connection.host}:{connection.port}:{connection.schema}',
 			'PARAM2==value2',
 			'PARAM3==value3'
 		],
-		conf = spark_conf,
-		dag = dag
+		conf=spark_conf,
+		dag=dag
 	)
