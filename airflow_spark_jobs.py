@@ -6,16 +6,21 @@ from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from airflow.utils.dates import days_ago
 from airflow.hooks.base_hook import BaseHook
 
-os.environ['JAVA_HOME']='path'
-os.environ['HADOOP_HOME']='path'
-os.environ['HADOOP_CONF_DIR']='path'
-os.environ['YARN_HOME']='path'
-os.environ['SPARK_HOME']='path'
+os.environ['JAVA_HOME'] = 'path'
+os.environ['HADOOP_HOME'] = 'path'
+os.environ['HADOOP_CONF_DIR'] = 'path'
+os.environ['YARN_HOME'] = 'path'
+os.environ['SPARK_HOME'] = 'path'
+os.environ['SPARK_CONF_DIR'] = 'path'
+os.environ['HIVE_HOME'] = 'path'
+os.environ['HIVE_CONF_DIR'] = 'path'
+os.environ['HADOOP_OPTS'] = 'opts'
 
 sys.path.append(os.path.join(os.environ['JAVA_HOME'], 'bin'))
 sys.path.append(os.path.join(os.environ['HADOOP_HOME'], 'bin'))
 sys.path.append(os.path.join(os.environ['YARN_HOME'], 'bin'))
 sys.path.append(os.path.join(os.environ['SPARK_HOME'], 'bin'))
+sys.path.append(os.path.join(os.environ['HIVE_HOME'], 'bin'))
 
 default_args = {
 	'owner': 'airflow',
@@ -28,12 +33,14 @@ default_args = {
 }
 
 home_dir = 'path/'
-connection = BaseHook.get_connection('conn_name')
+connection = BaseHook.get_connection('connection_name')
+dag_id = 'dag_name'
+task_id = 'task_name'
 
-with DAG('name', default_args=default_args, schedule_interval=[cron|preset], catchup=False, max_active_runs=1) as dag:
+with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|preset], catchup=False, max_active_runs=1) as dag:
 
 	bash_spark_task = BashOperator(
-		task_id = 'name',
+		task_id = task_id,
 		bash_command = f'spark-submit \
 		--class path.to.Main \
 		--master yarn \
@@ -47,7 +54,7 @@ with DAG('name', default_args=default_args, schedule_interval=[cron|preset], cat
 		--num-executors X \
 		--executor-cors X \
 		--executor-memory XG \
-		--conf spark.app.name=Project_name \
+		--conf spark.app.name={dag_id}.{task_id} \
 		--conf spark.hadoop.hive.exec.dynamic.partition=true \
 		--conf spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict \
 		--conf spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation=true \
@@ -71,8 +78,8 @@ with DAG('name', default_args=default_args, schedule_interval=[cron|preset], cat
 	}
 
 	spark_submit_task = SparkSubmitOperator(
-		task_id = 'name',
-		name = 'job_name',
+		task_id = task_id,
+		name = f'{dag_id}.{task_id}',
 		application = os.path.join(home_dir, 'project_jar')
 		java_class = 'path.to.Main'
 		spark_home = 'path'
