@@ -23,12 +23,12 @@ sys.path.append(os.path.join(os.environ['SPARK_HOME'], 'bin'))
 sys.path.append(os.path.join(os.environ['HIVE_HOME'], 'bin'))
 
 default_args = {
-	'owner': 'airflow',
+	'owner': 'user',
 	'depends_on_past': False,
 	'start_date': days_ago(1),
-	'email': [airflow@airflow.com],
+	'email': [user@mail.com],
 	'email_on_failure': True,
-	'email_on_retry': True,
+	'email_on_retry': False,
 	'retries': 0
 }
 
@@ -39,6 +39,7 @@ task_id = 'task_name'
 
 with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|preset], catchup=False, max_active_runs=1) as dag:
 
+	# First option - local spark-submit command with bash
 	bash_spark_task = BashOperator(
 		task_id = task_id,
 		bash_command = f'spark-submit \
@@ -77,6 +78,7 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|prese
 		'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation':'true'
 	}
 
+	# Second option - airflow spark submit operator
 	spark_submit_task = SparkSubmitOperator(
 		task_id = task_id,
 		name = f'{dag_id}.{task_id}',
@@ -88,8 +90,8 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|prese
 		keytab = os.path.join(home_dir, 'keytab')
 		jars = os.path.join(home_dir, 'jar')
 		application_args = [
-			f'PARAM1=={connection.host}:{connection.port}:{connection.schema}'
-			'PARAM2==value2'
+			f'PARAM1=={connection.host}:{connection.port}:{connection.schema}',
+			'PARAM2==value2',
 			'PARAM3==value3'
 		],
 		conf = spark_conf,
