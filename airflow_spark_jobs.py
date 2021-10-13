@@ -25,8 +25,11 @@ sys.path.append(os.path.join(os.environ['HIVE_HOME'], 'bin'))
 
 default_args = {
 	'owner': 'user',
+	'description': 'few words',
 	'depends_on_past': False,
 	'start_date': days_ago(1),
+	'max_active_runs': 1,
+	'catchup': False,
 	'email': [user@mail.com],
 	'email_on_failure': True,
 	'email_on_retry': False,
@@ -38,7 +41,7 @@ connection = BaseHook.get_connection('connection_name')
 dag_id = 'dag_name'
 task_id = 'task_name'
 
-with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|preset], catchup=False, max_active_runs=1) as dag:
+with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|preset]) as dag:
 
 	bash_command = f'spark-submit \
 	--class path.to.Main \
