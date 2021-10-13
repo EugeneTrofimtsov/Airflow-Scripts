@@ -1,10 +1,11 @@
 import os
 import sys
 from airflow import DAG
-from airflow.operators.bash_operator import BashOperator
-from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from airflow.utils.dates import days_ago
 from airflow.hooks.base_hook import BaseHook
+from airflow.operators.bash_operator import BashOperator
+from airflow.contrib.operators.ssh_operator import SSHOperator
+from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 
 os.environ['JAVA_HOME'] = 'path'
 os.environ['HADOOP_HOME'] = 'path'
@@ -39,33 +40,43 @@ task_id = 'task_name'
 
 with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|preset], catchup=False, max_active_runs=1) as dag:
 
+	bash_command = f'spark-submit \
+	--class path.to.Main \
+	--master yarn \
+	--deploy-mode [client|cluster] \
+	--keytab {home_dir}keytab \
+	--principal name@DOMEN \
+	--queue name \
+	--jars {home_dir}jar \
+	--driver-cores X \
+	--driver-memory XG \
+	--num-executors X \
+	--executor-cors X \
+	--executor-memory XG \
+	--conf spark.app.name={dag_id}.{task_id} \
+	--conf spark.hadoop.hive.exec.dynamic.partition=true \
+	--conf spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict \
+	--conf spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation=true \
+	{home_dir}project_jar \
+	PARAM1=={connection.host}:{connection.port}:{connection.schema} \
+	PARAM2==value2 \
+	PARAM3==value3'
+
 	# First option - local spark-submit command with bash
 	bash_spark_task = BashOperator(
 		task_id = task_id,
-		bash_command = f'spark-submit \
-		--class path.to.Main \
-		--master yarn \
-		--deploy-mode [client|cluster] \
-		--keytab {home_dir}keytab \
-		--principal name@DOMEN \
-		--queue name \
-		--jars {home_dir}jar \
-		--driver-cores X \
-		--driver-memory XG \
-		--num-executors X \
-		--executor-cors X \
-		--executor-memory XG \
-		--conf spark.app.name={dag_id}.{task_id} \
-		--conf spark.hadoop.hive.exec.dynamic.partition=true \
-		--conf spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict \
-		--conf spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation=true \
-		{home_dir}project_jar \
-		PARAM1=={connection.host}:{connection.port}:{connection.schema} \
-		PARAM2==value2 \
-		PARAM3==value3',
+		bash_command = bash_command,
 		dag = dag
 	)
 
+	# Second option - airflow ssh operator remote spark submit command with bash
+	ssh_spark_task = SSHOperator(
+		task_id = task_id,
+		ssh_conn_id='ssh_connection_name',
+		bash_command = bash_command,
+		dag = dag
+	)
+	
 	spark_conf = {
 		'spark.master':'yarn',
 		'spark.submit.deployMode':'cluster',
@@ -78,7 +89,7 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron|prese
 		'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation':'true'
 	}
 
-	# Second option - airflow spark submit operator
+	# Third option - airflow spark submit operator
 	spark_submit_task = SparkSubmitOperator(
 		task_id = task_id,
 		name = f'{dag_id}.{task_id}',
