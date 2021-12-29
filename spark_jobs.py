@@ -57,6 +57,8 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron | pre
     --executor-cors X \
     --executor-memory XG \
     --conf spark.app.name={dag_id}.{task_id} \
+    --conf spark.driver.extraJavaOptions=-Dfile.encoding=UTF-8 \
+    --conf spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8 \
     --conf spark.hadoop.hive.exec.dynamic.partition=true \
     --conf spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict \
     --conf spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation=true \
@@ -89,7 +91,9 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron | pre
         'spark.num.executors': 'X',
         'spark.hadoop.hive.exec.dynamic.partition': 'true',
         'spark.hadoop.hive.exec.dynamic.partition.mode': 'nonstrict',
-        'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation': 'true'
+        'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation': 'true',
+        'spark.executor.extraJavaOptions': '-Dfile.encoding=UTF-8',
+        'spark.driver.extraJavaOptions': '-Dfile.encoding=UTF-8'
     }
 
     # Third option - airflow spark submit operator
