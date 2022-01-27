@@ -1,6 +1,7 @@
 import os
 import sys
 from airflow import DAG
+from airflow.models import Variable
 from airflow.utils.dates import days_ago
 from airflow.hooks.base_hook import BaseHook
 from airflow.operators.bash_operator import BashOperator
@@ -36,19 +37,24 @@ default_args = {
     'retries': 0
 }
 
-home_dir = 'path/'
 connection = BaseHook.get_connection('connection_name')
+config = Variable.get('variable_name', deserialize_json=True)
+home_dir = config['home_dir']
+tuz = config['tuz']
+realm = config['realm']
+hive_db = config['hive_db']
 dag_id = 'dag_name'
 task_id = 'task_name'
+schedule_interval = '[cron | preset]'
 
-with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron | preset]) as dag:
+with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=schedule_interval) as dag:
 
     bash_command = f'spark-submit \
     --class path.to.Main \
     --master yarn \
     --deploy-mode [client|cluster] \
-    --keytab {home_dir}keytab \
-    --principal name@DOMEN \
+    --keytab {home_dir}{tuz}.keytab \
+    --principal {tuz}@{realm} \
     --queue name \
     --jars {home_dir}jar \
     --driver-cores X \
@@ -65,7 +71,7 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron | pre
     {home_dir}project_jar \
     PARAM1=={connection.host}:{connection.port}:{connection.schema} \
     PARAM2==value2 \
-    PARAM3==value3'
+    PARAM3=={hive_db}'
 
     # First option - local spark-submit command with bash
     bash_spark_task = BashOperator(
@@ -104,13 +110,13 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=[cron | pre
         java_class='path.to.Main',
         spark_home='path',
         spark_binary='path',
-        principal='name@DOMEN',
-        keytab=os.path.join(home_dir, 'keytab'),
+        principal=f'{tuz}@{realm}',
+        keytab=os.path.join(home_dir, f'{tuz}.keytab'),
         jars=os.path.join(home_dir, 'jar'),
         application_args=[
             f'PARAM1=={connection.host}:{connection.port}:{connection.schema}',
             'PARAM2==value2',
-            'PARAM3==value3'
+            f'PARAM3=={hive_db}'
         ],
         conf=spark_conf,
         dag=dag
