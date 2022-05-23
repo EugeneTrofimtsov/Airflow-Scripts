@@ -89,6 +89,34 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=schedule_in
         bash_command=bash_command,
         dag=dag
     )
+    
+    spark_env = {
+        'SPARK_MODE': 'local',
+        'SPARK_SPARK_MASTER_URL': 'spark://spark:7077',
+        'SPARK_WORKER_MEMORY': '16g',
+        'SPARK_WORKER_CORES': '4',
+        'SPARK_RPC_AUTHENTICATION_ENABLED': 'no',
+        'SPARK_RPC_ENCRYPTION_ENABLED': 'no',
+        'SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED': 'no',
+        'SPARK_SSL_ENABLED': 'no'
+    }
+    
+    sock_volume = Mount(target='/var/run/docker.sock', source='/var/run/docker.sock', type='bind')
+    spark_volume = Mount(target=home_dir, source=home_dir, type='bind')
+    
+    # Third option - airflow docker operator local spark-submit command with bash
+    generate_files = DockerOperator(
+        task_id=task_id,
+        image='spark',
+        api_version='auto',
+        auto_remove=True,
+        mount_tmp_dir=False,
+        mounts=[sock_volume, spark_volume],
+        environment=spark_env,
+        command=bash_command,
+        docker_url='unix://var/run/docker.sock',
+        network_mode='bridge'
+    )
 
     spark_conf = {
         'spark.master': 'yarn',
@@ -106,7 +134,7 @@ with DAG(dag_id=dag_id, default_args=default_args, schedule_interval=schedule_in
         'spark.driver.extraJavaOptions': '-Dfile.encoding=UTF-8'
     }
 
-    # Third option - airflow spark submit operator
+    # Fourth option - airflow spark submit operator
     spark_submit_task = SparkSubmitOperator(
         task_id=task_id,
         name=f'{dag_id}.{task_id}',
